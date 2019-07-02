@@ -6,7 +6,9 @@
   "author": "Gabriel de Souza <gabriellfsouza@gmail.com>",
   "license": "MIT",
   "scripts": {
-    "dev": "nodemon src/server.js"
+    "dev": "nodemon src/server.js",
+    "start": "sucrase-node src/server.js",
+    "debug": "node --inspect -r sucrase/register src/server.js"
   },
   "dependencies": {
     "bcryptjs": "^2.4.3",
@@ -25,6 +27,7 @@
     "eslint-plugin-prettier": "^3.1.0",
     "nodemon": "^1.19.1",
     "prettier": "^1.18.2",
+    "sequelize-cli": "^5.5.0",
     "sucrase": "^3.10.1"
   }
 }
