@@ -26,6 +26,10 @@ class User extends Model {
   checkPassword(password) {
     return bcrypt.compare(password, this.password_hash);
   }
+
+  static associate(models) {
+    this.hasMany(models.Meetup);
+  }
 }
 
 export default User;
