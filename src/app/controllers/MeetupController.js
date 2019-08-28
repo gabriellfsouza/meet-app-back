@@ -1,3 +1,5 @@
+import { parseISO, addDays } from 'date-fns';
+import { Op } from 'sequelize';
 import * as Yup from 'yup';
 import Meetup from '../models/Meetup';
 import File from '../models/File';
@@ -38,7 +40,7 @@ class MeetupController {
       await Meetup.findOne({
         where: { id: meetup.id },
         include: [
-          { model: File, as: 'banner', attributes: ['path', 'name', 'url'] },
+          { model: File, as: 'Banner', attributes: ['path', 'name', 'url'] },
           { model: User, attributes: ['name', 'email'] },
         ],
       })
@@ -66,7 +68,7 @@ class MeetupController {
     const meetup = await Meetup.findOne({
       where: { id, user_id },
       include: [
-        { model: File, as: 'banner', attributes: ['path', 'name', 'url'] },
+        { model: File, as: 'Banner', attributes: ['path', 'name', 'url'] },
         { model: User, attributes: ['name', 'email'] },
       ],
     });
@@ -83,13 +85,41 @@ class MeetupController {
   }
 
   async index(req, res) {
-    const user_id = req.userId;
+    const schema = Yup.object().shape({
+      date: Yup.date().required(
+        'date parameter is required with YYYY-DD-MM format'
+      ),
+      page: Yup.number()
+        .min(1)
+        .required('page parameter is required'),
+    });
+
+    const { date: strDate, page: inPage } = req.query;
+    const pageSize = 10;
+
+    const date = parseISO(strDate, 'YYYY-DD-MM');
+    const page = inPage - 1;
+
+    try {
+      await schema.validate({ ...req.query, date });
+    } catch (error) {
+      return res.status(400).json({ error: error.errors });
+    }
+
+    const offset = page * pageSize;
+    const limit = offset + pageSize;
 
     return res.json(
       await Meetup.findAll({
-        where: { user_id },
+        where: {
+          date: {
+            [Op.between]: [date, addDays(date, 1)],
+          },
+        },
+        offset,
+        limit,
         include: [
-          { model: File, as: 'banner', attributes: ['path', 'name', 'url'] },
+          { model: File, as: 'Banner', attributes: ['path', 'name', 'url'] },
           { model: User, attributes: ['name', 'email'] },
         ],
       })

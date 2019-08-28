@@ -18,6 +18,10 @@ class File extends Model {
       }
     );
   }
+
+  static associate(models) {
+    this.hasOne(models.Meetup, { foreignKey: 'banner_id' });
+  }
 }
 
 export default File;
