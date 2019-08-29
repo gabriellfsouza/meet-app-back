@@ -5,6 +5,9 @@ import Subscription from '../models/Subscription';
 import Meetup from '../models/Meetup';
 import User from '../models/User';
 
+import Queue from '../../lib/Queue';
+import SubscriptionMail from '../jobs/SubscriptionMail';
+
 class SubscriptionController {
   async store(req, res) {
     const schema = Yup.object().shape({
@@ -36,6 +39,10 @@ class SubscriptionController {
         {
           model: Subscription,
           include: [{ model: Meetup }],
+        },
+        {
+          model: User,
+          attributes: ['name', 'email'],
         },
       ],
     });
@@ -85,19 +92,44 @@ class SubscriptionController {
       subscriber_id,
     });
 
-    return res.json(
-      await Subscription.findOne({
-        where: { id: subscription.id },
-        include: [
-          {
-            model: Meetup,
-            attributes: ['title', 'description', 'location', 'date'],
-            include: [{ model: User, attributes: ['name', 'email'] }],
-          },
-          { model: User, as: 'Subscriber', attributes: ['name', 'email'] },
-        ],
-      })
-    );
+    const subscriptionData = await Subscription.findOne({
+      where: { id: subscription.id },
+      include: [
+        {
+          model: Meetup,
+          attributes: ['title', 'description', 'location', 'date'],
+          include: [{ model: User, attributes: ['name', 'email'] }],
+        },
+        { model: User, as: 'Subscriber', attributes: ['name', 'email'] },
+      ],
+    });
+
+    await Queue.add(SubscriptionMail.key, { subscriptionData });
+
+    return res.json(subscriptionData);
+  }
+
+  async delete(req, res) {
+    const { id } = req.params;
+    const subscriber_id = req.userId;
+
+    const subscription = await Subscription.findOne({
+      where: {
+        id,
+        subscriber_id,
+        canceled_at: {
+          [Op.is]: null,
+        },
+      },
+    });
+
+    if (!subscription)
+      return res.status(400).json({ error: 'subscription not found' });
+
+    subscription.canceled_at = new Date();
+    subscription.save();
+
+    return res.status(200).send();
   }
 
   async index(req, res) {
