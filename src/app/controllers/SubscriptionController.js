@@ -4,6 +4,7 @@ import { Op } from 'sequelize';
 import Subscription from '../models/Subscription';
 import Meetup from '../models/Meetup';
 import User from '../models/User';
+import File from '../models/File';
 
 import Queue from '../../lib/Queue';
 import SubscriptionMail from '../jobs/SubscriptionMail';
@@ -40,6 +41,7 @@ class SubscriptionController {
           model: Subscription,
           include: [{ model: Meetup }],
         },
+        { model: File, as: 'Banner', attributes: ['id', 'url', 'name'] },
         {
           model: User,
           attributes: ['name', 'email'],
@@ -106,7 +108,25 @@ class SubscriptionController {
 
     await Queue.add(SubscriptionMail.key, { subscriptionData });
 
-    return res.json(subscriptionData);
+    return res.json(
+      await Meetup.findByPk(meetup.id, {
+        include: [
+          {
+            model: Subscription,
+            where: { subscriber_id, canceled_at: { [Op.is]: null } },
+          },
+          {
+            model: File,
+            as: 'Banner',
+            attributes: ['path', 'name', 'url', 'id'],
+          },
+          {
+            model: User,
+            attributes: ['name', 'email', 'id'],
+          },
+        ],
+      })
+    );
   }
 
   async delete(req, res) {
@@ -144,6 +164,15 @@ class SubscriptionController {
         {
           model: Subscription,
           where: { subscriber_id, canceled_at: { [Op.is]: null } },
+        },
+        {
+          model: File,
+          as: 'Banner',
+          attributes: ['path', 'name', 'url', 'id'],
+        },
+        {
+          model: User,
+          attributes: ['name', 'email', 'id'],
         },
       ],
       order: ['date'],

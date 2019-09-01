@@ -40,7 +40,11 @@ class MeetupController {
       await Meetup.findOne({
         where: { id: meetup.id },
         include: [
-          { model: File, as: 'Banner', attributes: ['path', 'name', 'url'] },
+          {
+            model: File,
+            as: 'Banner',
+            attributes: ['path', 'name', 'url', 'id'],
+          },
           { model: User, attributes: ['name', 'email'] },
         ],
       })
@@ -68,7 +72,11 @@ class MeetupController {
     const meetup = await Meetup.findOne({
       where: { id, user_id },
       include: [
-        { model: File, as: 'Banner', attributes: ['path', 'name', 'url'] },
+        {
+          model: File,
+          as: 'Banner',
+          attributes: ['path', 'name', 'url', 'id'],
+        },
         { model: User, attributes: ['name', 'email'] },
       ],
     });
@@ -81,7 +89,20 @@ class MeetupController {
         .status(400)
         .json({ error: 'you can only edit future meetups' });
 
-    return res.json(await meetup.update({ ...req.body, user_id: undefined }));
+    await meetup.update({ ...req.body, user_id: undefined });
+
+    return res.json(
+      await Meetup.findByPk(id, {
+        include: [
+          {
+            model: File,
+            as: 'Banner',
+            attributes: ['path', 'name', 'url', 'id'],
+          },
+          { model: User, attributes: ['name', 'email'] },
+        ],
+      })
+    );
   }
 
   async index(req, res) {
@@ -130,17 +151,21 @@ class MeetupController {
     const { id } = req.params;
     const user_id = req.userId;
 
-    const meetup = await Meetup.findOne({ where: { id, user_id } });
+    const meetup = await Meetup.findByPk(id);
 
-    if (!meetup)
+    if (!meetup) return res.status(404).json({ error: 'meetup not found' });
+
+    if (meetup.user_id !== user_id)
       return res.status(404).json({ error: 'meetup not found for this user' });
 
-    if (meetup.date.getTime() < new Date().getTime())
+    if (meetup.past)
       return res
         .status(400)
         .json({ error: 'you can only remove future meetups' });
 
-    return res.json(await meetup.destroy());
+    await meetup.destroy();
+
+    return res.json();
   }
 }
 
