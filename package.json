@@ -2,7 +2,7 @@
   "name": "meetapp",
   "version": "1.0.0",
   "main": "index.js",
-  "repository": "https://github.com/gabriellfsouza/Meetapp.git",
+  "repository": "https://github.com/gabriellfsouza/meet-app-back.git",
   "author": "Gabriel de Souza <gabriellfsouza@gmail.com>",
   "license": "MIT",
   "scripts": {
